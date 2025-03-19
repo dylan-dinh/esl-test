@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package user;
+
+option go_package = "esl-test/internal/interfaces/grpc/user";
+
+import "google/protobuf/timestamp.proto";
+
+message User {
+  string id = 1;
+  string first_name = 2;
+  string last_name = 3;
+  string nickname = 4;
+  string email = 5;
+  string country = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+message CreateUserRequest {
+  string first_name = 1;
+  string last_name = 2;
+  string nickname = 3;
+  string email = 4;
+  string country = 5;
+  string password = 6;
+}
+
+message CreateUserResponse {
+  string id = 1;
+  google.protobuf.Timestamp created_at = 2;
+}
+
+service UserService {
+  rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
+}
