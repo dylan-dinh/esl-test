@@ -2,13 +2,12 @@ package user
 
 import (
 	"context"
-	"github.com/google/uuid"
 	"time"
 )
 
 // User domain will verify business logic if needed
 type User struct {
-	ID        uuid.UUID
+	ID        string
 	FirstName string
 	LastName  string
 	Nickname  string
@@ -27,7 +26,7 @@ type Filter struct {
 // Repository define the interface to interact with the entity User
 type Repository interface {
 	Create(ctx context.Context, u User) error
-	Update(ctx context.Context, u User) error
+	Update(ctx context.Context, u *User) error
 	Delete(ctx context.Context, id string) error
 	GetByID(ctx context.Context, id string) (User, error)
 	List(ctx context.Context, filter *Filter) ([]User, error)

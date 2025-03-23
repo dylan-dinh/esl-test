@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 	"log/slog"
 	"os"
 	"time"
@@ -29,21 +30,32 @@ func NewUserService(repo Repository) Service {
 	return &userService{repo: repo, logger: slog.New(handler)}
 }
 
-// CreateUser create a user using the repository, adding business logic if needed
+// CreateUser create a user using the repository
 func (s *userService) CreateUser(ctx context.Context, u *User) error {
 	if u.Email == "" {
 		return errors.New("email is required")
 	}
-	u.ID = uuid.New()
+	u.ID = uuid.New().String()
 	u.CreatedAt = time.Now()
 	u.UpdatedAt = time.Now()
+	password, err := bcrypt.GenerateFromPassword([]byte(u.Password), 10)
+	if err != nil {
+		return err
+	}
+	u.Password = string(password)
 	return s.repo.Create(ctx, *u)
 }
 
 // UpdateUser update the user data and updated at timestamp
 func (s *userService) UpdateUser(ctx context.Context, u *User) error {
 	u.UpdatedAt = time.Now()
-	return s.repo.Update(ctx, *u)
+	password, err := bcrypt.GenerateFromPassword([]byte(u.Password), 10)
+	if err != nil {
+		return err
+	}
+	u.Password = string(password)
+
+	return s.repo.Update(ctx, u)
 }
 
 // DeleteUser delete a user by its ID

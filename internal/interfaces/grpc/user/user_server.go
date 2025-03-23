@@ -21,7 +21,7 @@ func NewUserServer(svc domainUser.Service) *UserServer {
 	return &UserServer{service: svc}
 }
 
-// CreateUser is an example gRPC method implementation.
+// CreateUser is the gRPC method to create a user
 func (s *UserServer) CreateUser(ctx context.Context, req *CreateUserRequest) (*CreateUserResponse, error) {
 	newUser := &domainUser.User{
 		FirstName: req.FirstName,
@@ -39,7 +39,28 @@ func (s *UserServer) CreateUser(ctx context.Context, req *CreateUserRequest) (*C
 	}
 
 	return &CreateUserResponse{
-		Id:        newUser.ID.String(),
+		Id:        newUser.ID,
 		CreatedAt: timestamppb.New(newUser.CreatedAt),
+	}, nil
+}
+
+func (s *UserServer) UpdateUser(ctx context.Context, req *UpdateUserRequest) (*UpdateUserResponse, error) {
+	updatedUser := &domainUser.User{
+		ID:        req.Id,
+		FirstName: req.FirstName,
+		LastName:  req.LastName,
+		Nickname:  req.Nickname,
+		Email:     req.Email,
+		Country:   req.Country,
+		Password:  req.Password,
+	}
+
+	if err := s.service.UpdateUser(ctx, updatedUser); err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to create user: %v", err)
+	}
+
+	return &UpdateUserResponse{
+		Id:        req.Id,
+		UpdatedAt: timestamppb.New(updatedUser.UpdatedAt),
 	}, nil
 }
