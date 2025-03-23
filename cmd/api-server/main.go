@@ -45,7 +45,7 @@ func main() {
 	userService := user.NewUserService(userRepo)
 	userServer := pb.NewUserServer(userService)
 
-	listener, err := net.Listen("tcp", fmt.Sprintf("localhost:%s", conf.GrpcPort))
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%s", conf.GrpcPort))
 	if err != nil {
 		panic("failed to listen")
 	}
