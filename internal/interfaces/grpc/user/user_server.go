@@ -24,12 +24,12 @@ func NewUserServer(svc domainUser.Service) *UserServer {
 // CreateUser is the gRPC method to create a user
 func (s *UserServer) CreateUser(ctx context.Context, req *CreateUserRequest) (*CreateUserResponse, error) {
 	newUser := &domainUser.User{
-		FirstName: req.FirstName,
-		LastName:  req.LastName,
-		Nickname:  req.Nickname,
-		Email:     req.Email,
-		Country:   req.Country,
-		Password:  req.Password,
+		FirstName: req.GetFirstName(),
+		LastName:  req.GetLastName(),
+		Nickname:  req.GetNickname(),
+		Email:     req.GetEmail(),
+		Country:   req.GetCountry(),
+		Password:  req.GetPassword(),
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -46,7 +46,7 @@ func (s *UserServer) CreateUser(ctx context.Context, req *CreateUserRequest) (*C
 
 func (s *UserServer) UpdateUser(ctx context.Context, req *UpdateUserRequest) (*UpdateUserResponse, error) {
 	updatedUser := &domainUser.User{
-		ID:        req.Id,
+		ID:        req.GetId(),
 		FirstName: req.FirstName,
 		LastName:  req.LastName,
 		Nickname:  req.Nickname,
@@ -60,7 +60,33 @@ func (s *UserServer) UpdateUser(ctx context.Context, req *UpdateUserRequest) (*U
 	}
 
 	return &UpdateUserResponse{
-		Id:        req.Id,
+		Id:        req.GetId(),
 		UpdatedAt: timestamppb.New(updatedUser.UpdatedAt),
+	}, nil
+}
+
+func (s *UserServer) DeleteUser(ctx context.Context, req *DeleteUserRequest) (*DeleteUserResponse, error) {
+	if err := s.service.DeleteUser(ctx, req.GetId()); err != nil {
+		return &DeleteUserResponse{}, err
+	}
+	return &DeleteUserResponse{
+		Id: req.GetId(),
+	}, nil
+}
+
+func (s *UserServer) GetUser(ctx context.Context, req *GetUserRequest) (*GetUserResponse, error) {
+	var user *domainUser.User
+	var err error
+
+	if user, err = s.service.GetUser(ctx, req.GetId()); err != nil {
+		return &GetUserResponse{}, err
+	}
+
+	return &GetUserResponse{
+		FirstName: user.FirstName,
+		LastName:  user.LastName,
+		Nickname:  user.Nickname,
+		Email:     user.Email,
+		Country:   user.Country,
 	}, nil
 }

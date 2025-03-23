@@ -37,7 +37,7 @@ func main() {
 	defer cancel()
 	defer func() {
 		if err := newDb.DB.Disconnect(ctx); err != nil {
-			logger.Error("Error disconnecting from DB: %v", err)
+			logger.Error("Error disconnecting from DB", "error", err)
 		}
 	}()
 

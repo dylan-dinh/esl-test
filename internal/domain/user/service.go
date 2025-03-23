@@ -43,7 +43,7 @@ func (s *userService) CreateUser(ctx context.Context, u *User) error {
 		return err
 	}
 	u.Password = string(password)
-	return s.repo.Create(ctx, *u)
+	return s.repo.Create(ctx, u)
 }
 
 // UpdateUser update the user data and updated at timestamp
@@ -60,7 +60,7 @@ func (s *userService) UpdateUser(ctx context.Context, u *User) error {
 
 // DeleteUser delete a user by its ID
 func (s *userService) DeleteUser(ctx context.Context, id string) error {
-	return s.repo.Delete(ctx, id)
+	return s.repo.DeleteByID(ctx, id)
 }
 
 // GetUser gets a user by its ID
