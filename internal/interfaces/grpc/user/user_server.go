@@ -69,7 +69,7 @@ func (s *UserServer) UpdateUser(ctx context.Context, req *UpdateUserRequest) (*U
 // DeleteUser is the RPC method to delete a user
 func (s *UserServer) DeleteUser(ctx context.Context, req *DeleteUserRequest) (*DeleteUserResponse, error) {
 	if err := s.service.DeleteUser(ctx, req.Id); err != nil {
-		return &DeleteUserResponse{}, err
+		return nil, err
 	}
 	return &DeleteUserResponse{
 		Id: req.GetId(),
@@ -82,7 +82,7 @@ func (s *UserServer) GetUserById(ctx context.Context, req *GetUserRequest) (*Get
 	var err error
 
 	if user, err = s.service.GetUser(ctx, req.Id); err != nil {
-		return &GetUserResponse{}, err
+		return nil, err
 	}
 
 	return &GetUserResponse{

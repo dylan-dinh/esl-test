@@ -29,9 +29,10 @@ type UserFilter struct {
 
 // Repository define the interface to interact with the entity User
 type Repository interface {
-	Create(ctx context.Context, u *User) error
-	Update(ctx context.Context, u *User) error
-	DeleteByID(ctx context.Context, id string) error
-	GetByID(ctx context.Context, id string) (User, error)
-	List(ctx context.Context, filter *UserFilter) ([]User, int64, error)
+	Create(context.Context, *User) error
+	Update(context.Context, *User) error
+	DeleteByID(context.Context, string) error
+	GetByID(context.Context, string) (User, error)
+	List(context.Context, *UserFilter) ([]User, int64, error)
+	ExistsByEmail(context.Context, string) (bool, error)
 }

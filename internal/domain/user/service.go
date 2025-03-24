@@ -10,6 +10,12 @@ import (
 	"time"
 )
 
+var (
+	ErrMissingEmailPassword = errors.New("email and password are required")
+	ErrMissingName          = errors.New("first_name and last_name are required")
+	ErrEmailExists          = errors.New("email already exists")
+)
+
 // Service define the interface for the business logic of the User entity
 type Service interface {
 	CreateUser(ctx context.Context, u *User) error
@@ -32,8 +38,18 @@ func NewUserService(repo Repository) Service {
 
 // CreateUser create a user using the repository
 func (s *userService) CreateUser(ctx context.Context, u *User) error {
-	if u.Email == "" {
-		return errors.New("email is required")
+	if u.Email == "" || u.Password == "" {
+		return ErrMissingEmailPassword
+	}
+	if u.FirstName == "" || u.LastName == "" {
+		return ErrMissingName
+	}
+	exists, err := s.repo.ExistsByEmail(ctx, u.Email)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return ErrEmailExists
 	}
 	u.ID = uuid.New().String()
 	u.CreatedAt = time.Now()

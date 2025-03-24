@@ -20,11 +20,28 @@ type UserRepository struct {
 }
 
 // NewUserRepository crée une instance de UserRepository.
-func NewUserRepository(coll *mongo.Client, dbName string) *UserRepository {
-	handler := slog.NewTextHandler(os.Stdout, nil)
+func NewUserRepository(conn *mongo.Client, dbName string) *UserRepository {
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	coll := conn.Database(dbName).Collection(collectionName)
+
+	constraint := mongo.IndexModel{
+		Keys:    bson.D{{Key: "email", Value: 1}},
+		Options: options.Index().SetUnique(true),
+	}
+
+	if _, err := coll.Indexes().CreateOne(context.Background(), constraint); err != nil {
+		var cmdErr mongo.CommandError
+		if errors.As(err, &cmdErr) && cmdErr.Code == 85 {
+			// index already exists, safe to ignore
+		} else {
+			logger.Error("fail to create unicity on email")
+		}
+	}
+	logger.Info("unicity on users.email created")
+
 	return &UserRepository{
-		coll:   coll.Database(dbName).Collection(collectionName),
-		logger: slog.New(handler),
+		coll:   coll,
+		logger: logger,
 	}
 }
 
@@ -135,4 +152,18 @@ func (r *UserRepository) List(ctx context.Context, filter *user.UserFilter) ([]u
 		return nil, 0, err
 	}
 	return users, total, nil
+}
+
+func (r *UserRepository) ExistsByEmail(ctx context.Context, email string) (bool, error) {
+	filter := bson.D{{Key: "email", Value: email}}
+	err := r.coll.FindOne(ctx, filter).Err()
+
+	switch {
+	case errors.Is(err, mongo.ErrNoDocuments):
+		return false, nil
+	case err != nil:
+		return false, err
+	default:
+		return true, nil
+	}
 }
