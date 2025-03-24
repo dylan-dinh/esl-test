@@ -43,8 +43,8 @@ func (r *UserRepository) Update(ctx context.Context, u *user.User) error {
 	filter := bson.D{{"id", u.ID}}
 	update := bson.D{{
 		"$set", bson.D{
-			{"firstname", u.FirstName},
-			{"lastname", u.LastName},
+			{"first_name", u.FirstName},
+			{"last_name", u.LastName},
 			{"nickname", u.Nickname},
 			{"email", u.Email},
 			{"country", u.Country},
@@ -105,7 +105,34 @@ func (r *UserRepository) GetByID(ctx context.Context, id string) (user.User, err
 
 }
 
-func (r *UserRepository) List(ctx context.Context, filter *user.Filter) ([]user.User, error) {
-	// Implémente la récupération d'une liste d'utilisateurs en fonction du filtre.
-	return nil, nil
+func (r *UserRepository) List(ctx context.Context, filter *user.UserFilter) ([]user.User, int64, error) {
+	query := bson.D{}
+	if filter.FirstName != "" {
+		query = append(query, bson.E{Key: "first_name", Value: filter.FirstName})
+	}
+	if filter.LastName != "" {
+		query = append(query, bson.E{Key: "last_name", Value: filter.LastName})
+	}
+	if filter.Country != "" {
+		query = append(query, bson.E{Key: "country", Value: filter.Country})
+	}
+
+	total, err := r.coll.CountDocuments(ctx, query)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	skip := int64((filter.Page - 1) * filter.PageSize)
+	limit := int64(filter.PageSize)
+	opts := options.Find().SetSkip(skip).SetLimit(limit)
+
+	cursor, err := r.coll.Find(ctx, query, opts)
+	if err != nil {
+		return nil, 0, err
+	}
+	var users []user.User
+	if err := cursor.All(ctx, &users); err != nil {
+		return nil, 0, err
+	}
+	return users, total, nil
 }

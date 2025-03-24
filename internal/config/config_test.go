@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestGetConfigTableDriven(t *testing.T) {
+func TestConfig(t *testing.T) {
 	type testCase struct {
 		name          string
 		envContent    string

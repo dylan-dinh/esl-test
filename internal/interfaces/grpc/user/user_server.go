@@ -24,12 +24,12 @@ func NewUserServer(svc domainUser.Service) *UserServer {
 // CreateUser is the RPC method to create a user
 func (s *UserServer) CreateUser(ctx context.Context, req *CreateUserRequest) (*CreateUserResponse, error) {
 	newUser := &domainUser.User{
-		FirstName: req.GetFirstName(),
-		LastName:  req.GetLastName(),
-		Nickname:  req.GetNickname(),
-		Email:     req.GetEmail(),
-		Country:   req.GetCountry(),
-		Password:  req.GetPassword(),
+		FirstName: req.FirstName,
+		LastName:  req.LastName,
+		Nickname:  req.Nickname,
+		Email:     req.Email,
+		Country:   req.Country,
+		Password:  req.Password,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -47,7 +47,7 @@ func (s *UserServer) CreateUser(ctx context.Context, req *CreateUserRequest) (*C
 // UpdateUser is the RPC method to update a user information
 func (s *UserServer) UpdateUser(ctx context.Context, req *UpdateUserRequest) (*UpdateUserResponse, error) {
 	updatedUser := &domainUser.User{
-		ID:        req.GetId(),
+		ID:        req.Id,
 		FirstName: req.FirstName,
 		LastName:  req.LastName,
 		Nickname:  req.Nickname,
@@ -61,14 +61,14 @@ func (s *UserServer) UpdateUser(ctx context.Context, req *UpdateUserRequest) (*U
 	}
 
 	return &UpdateUserResponse{
-		Id:        req.GetId(),
+		Id:        req.Id,
 		UpdatedAt: timestamppb.New(updatedUser.UpdatedAt),
 	}, nil
 }
 
 // DeleteUser is the RPC method to delete a user
 func (s *UserServer) DeleteUser(ctx context.Context, req *DeleteUserRequest) (*DeleteUserResponse, error) {
-	if err := s.service.DeleteUser(ctx, req.GetId()); err != nil {
+	if err := s.service.DeleteUser(ctx, req.Id); err != nil {
 		return &DeleteUserResponse{}, err
 	}
 	return &DeleteUserResponse{
@@ -81,7 +81,7 @@ func (s *UserServer) GetUserById(ctx context.Context, req *GetUserRequest) (*Get
 	var user *domainUser.User
 	var err error
 
-	if user, err = s.service.GetUser(ctx, req.GetId()); err != nil {
+	if user, err = s.service.GetUser(ctx, req.Id); err != nil {
 		return &GetUserResponse{}, err
 	}
 
@@ -91,5 +91,40 @@ func (s *UserServer) GetUserById(ctx context.Context, req *GetUserRequest) (*Get
 		Nickname:  user.Nickname,
 		Email:     user.Email,
 		Country:   user.Country,
+	}, nil
+}
+
+// ListUsers implements the ListUsers RPC.
+func (s *UserServer) ListUsers(ctx context.Context, req *ListUsersRequest) (*ListUsersResponse, error) {
+	filter := &domainUser.UserFilter{
+		FirstName: req.FirstName,
+		LastName:  req.LastName,
+		Country:   req.Country,
+		Page:      req.Page,
+		PageSize:  req.PageSize,
+	}
+
+	users, total, err := s.service.ListUsers(ctx, filter)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to list users: %v", err)
+	}
+
+	var pbUsers []*User
+	for _, u := range users {
+		pbUsers = append(pbUsers, &User{
+			Id:        u.ID,
+			FirstName: u.FirstName,
+			LastName:  u.LastName,
+			Nickname:  u.Nickname,
+			Email:     u.Email,
+			Country:   u.Country,
+			CreatedAt: timestamppb.New(u.CreatedAt),
+			UpdatedAt: timestamppb.New(u.UpdatedAt),
+		})
+	}
+
+	return &ListUsersResponse{
+		Users:      pbUsers,
+		TotalCount: total,
 	}, nil
 }

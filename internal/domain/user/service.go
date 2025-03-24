@@ -16,7 +16,7 @@ type Service interface {
 	UpdateUser(ctx context.Context, u *User) error
 	DeleteUser(ctx context.Context, id string) error
 	GetUser(ctx context.Context, id string) (*User, error)
-	ListUsers(ctx context.Context, filter *Filter) ([]User, error)
+	ListUsers(ctx context.Context, filter *UserFilter) ([]User, int64, error)
 }
 
 // userService is the concrete implementation of the Service interface
@@ -73,6 +73,6 @@ func (s *userService) GetUser(ctx context.Context, id string) (*User, error) {
 }
 
 // ListUsers return the list of user according to filter
-func (s *userService) ListUsers(ctx context.Context, filter *Filter) ([]User, error) {
+func (s *userService) ListUsers(ctx context.Context, filter *UserFilter) ([]User, int64, error) {
 	return s.repo.List(ctx, filter)
 }

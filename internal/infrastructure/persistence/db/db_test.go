@@ -25,7 +25,7 @@ func TestNewDbIntegration(t *testing.T) {
 			name: "Success - valid configuration",
 			cfg: config.Config{
 				GrpcPort: "50051",
-				DbHost:   "localhost",
+				DbHost:   "mongodb",
 				DbPort:   "27017",
 				DbName:   "testdb",
 			},
@@ -35,8 +35,8 @@ func TestNewDbIntegration(t *testing.T) {
 			name: "Failure - invalid DB port",
 			cfg: config.Config{
 				GrpcPort: "50051",
-				DbHost:   "localhost",
-				DbPort:   "12345", // assuming nothing is listening here
+				DbHost:   "mongodb",
+				DbPort:   "12345",
 				DbName:   "testdb",
 			},
 			shouldSucceed: false,

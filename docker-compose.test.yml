@@ -1,10 +1,16 @@
 services:
-  app:
+  mongodb:
+    image: mongo:6.0.21
+    restart: always
+    ports:
+      - "27017:27017"
+    tmpfs:
+      - /data/db
+
+  tests:
     build:
       context: .
-      dockerfile: Dockerfile-app
-    ports:
-      - "50051:50051"
+      dockerfile: Dockerfile-test
     environment:
       - GRPC_PORT=50051
       - DB_HOST=mongodb
@@ -12,14 +18,6 @@ services:
       - DB_NAME=testdb
     depends_on:
       - mongodb
-
-  mongodb:
-    image: mongo:6.0.21
-    restart: always
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo-data:/data/db
 
 volumes:
   mongo-data:

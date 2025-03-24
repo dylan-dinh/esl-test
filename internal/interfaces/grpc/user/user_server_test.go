@@ -23,13 +23,13 @@ func setupIntegrationTest(t *testing.T) (user.Service, func()) {
 	t.Helper()
 
 	// Write a temporary .env file.
-	envContent := `GRPC_PORT=50051
-DB_HOST=localhost
-DB_PORT=27017
-DB_NAME=testdb
-`
-	err := os.WriteFile(".env", []byte(envContent), 0644)
-	require.NoError(t, err)
+	//envContent := `GRPC_PORT=50051
+	//DB_HOST=localhost
+	//DB_PORT=27017
+	//DB_NAME=testdb
+	//`
+	//err := os.WriteFile(".env", []byte(envContent), 0644)
+	//require.NoError(t, err)
 
 	conf, err := config.GetConfig()
 	require.NoError(t, err)
@@ -43,6 +43,7 @@ DB_NAME=testdb
 	cleanup := func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
+		_ = newDb.DB.Database(conf.DbName).Collection("users").Drop(ctx)
 		_ = newDb.DB.Disconnect(ctx)
 		_ = os.Remove(".env")
 	}
@@ -166,4 +167,113 @@ func TestGetUserIntegration(t *testing.T) {
 	assert.Equal(t, testUser.Nickname, returnedUser.Nickname)
 	assert.Equal(t, testUser.Email, returnedUser.Email)
 	assert.Equal(t, testUser.Country, returnedUser.Country)
+}
+
+func TestListUsersByFirstNameIntegration(t *testing.T) {
+	userSvc, cleanup := setupIntegrationTest(t)
+	defer cleanup()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	// Create test data.
+	testUsers := []user.User{
+		{FirstName: "Dylan", LastName: "Dinh", Country: "UK", Nickname: "DD1", Email: "Dylan1@faceit.com", Password: "password"},
+		{FirstName: "Dylan", LastName: "Brown", Country: "UK", Nickname: "DB1", Email: "Dylan2@faceit.com", Password: "password"},
+		{FirstName: "Foo", LastName: "Jones", Country: "US", Nickname: "FJ1", Email: "Foo1@faceit.com", Password: "password"},
+		{FirstName: "Marko", LastName: "White", Country: "UK", Nickname: "MW1", Email: "Marko@faceit.com", Password: "password"},
+		{FirstName: "Matteo", LastName: "Black", Country: "US", Nickname: "MB1", Email: "Matteo@faceit.com", Password: "password"},
+		{FirstName: "Dylan", LastName: "Cooper", Country: "UK", Nickname: "DC1", Email: "Dylan3@faceit.com", Password: "password"},
+		{FirstName: "Etienne", LastName: "Davis", Country: "US", Nickname: "ED1", Email: "Etienne@faceit.com", Password: "password"},
+		{FirstName: "Thomas", LastName: "Miller", Country: "UK", Nickname: "TM1", Email: "Thomas@faceit.com", Password: "password"},
+	}
+
+	// Insert all test users.
+	for i := range testUsers {
+		err := userSvc.CreateUser(ctx, &testUsers[i])
+		require.NoError(t, err, "CreateUser should succeed")
+		require.NotEmpty(t, testUsers[i].ID, "User ID should be generated")
+	}
+
+	// Define test cases.
+	type listTestCase struct {
+		name          string
+		firstName     string
+		lastName      string
+		country       string
+		page          int32
+		pageSize      int32
+		expectedTotal int64 // Total count of matching users
+		expectedSlice int   // Number of users returned in the page
+	}
+
+	testCases := []listTestCase{
+		{
+			name:          "Filter by first name 'Dylan'",
+			firstName:     "Dylan",
+			lastName:      "",
+			country:       "",
+			page:          1,
+			pageSize:      10,
+			expectedTotal: 3, // Three users with first name "Dylan"
+			expectedSlice: 3,
+		},
+		{
+			name:          "Filter by last name 'Dinh'",
+			firstName:     "",
+			lastName:      "Dinh",
+			country:       "",
+			page:          1,
+			pageSize:      10,
+			expectedTotal: 1, // One user with last name "Dinh"
+			expectedSlice: 1,
+		},
+		{
+			name:          "Filter by country 'UK'",
+			firstName:     "",
+			lastName:      "",
+			country:       "UK",
+			page:          1,
+			pageSize:      10,
+			expectedTotal: 5, // Users: Dylan Dinh, Dylan Brown, Charlie White, Dylan Cooper, Frank Miller
+			expectedSlice: 5,
+		},
+		{
+			name:          "Pagination: page 1 with 10 per page",
+			firstName:     "",
+			lastName:      "",
+			country:       "", // No filtering, list all users
+			page:          1,
+			pageSize:      10,
+			expectedTotal: 8, // Total 8 users inserted
+			expectedSlice: 8,
+		},
+		{
+			name:          "Pagination: page 2 with 2 per page",
+			firstName:     "",
+			lastName:      "",
+			country:       "", // No filtering, list all users
+			page:          2,
+			pageSize:      2,
+			expectedTotal: 8, // Total 8 users inserted
+			expectedSlice: 2,
+		},
+	}
+
+	// Iterate over each test case.
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			filter := &user.UserFilter{
+				FirstName: tc.firstName,
+				LastName:  tc.lastName,
+				Country:   tc.country,
+				Page:      tc.page,
+				PageSize:  tc.pageSize,
+			}
+			listedUsers, total, err := userSvc.ListUsers(ctx, filter)
+			require.NoError(t, err, "ListUsers should succeed")
+			assert.Equal(t, tc.expectedTotal, total, "expected total count")
+			assert.Equal(t, tc.expectedSlice, len(listedUsers), "expected slice length")
+		})
+	}
 }

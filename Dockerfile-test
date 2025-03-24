@@ -7,5 +7,5 @@ RUN go mod download
 
 COPY . .
 
-# Set the command to run all tests with the integration tag and any other test
-CMD ["go", "test", "-v", "./..."]
+
+CMD ["go", "test", "-v", "-tags=integration", "./..."]

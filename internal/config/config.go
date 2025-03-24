@@ -22,9 +22,11 @@ type Config struct {
 }
 
 func GetConfig() (Config, error) {
-	err := godotenv.Load()
-	if err != nil {
-		return Config{}, err
+	// I did this because in docker-compose for test I couldn't load env file
+	// So I passed environment value
+	// But testing locally I provide env file with my IDE
+	if err := godotenv.Load(); err != nil && !os.IsNotExist(err) {
+		return Config{}, fmt.Errorf("loading .env: %w", err)
 	}
 
 	var grpcPort, dbHost, dbPort, dbName string

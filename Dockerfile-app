@@ -3,14 +3,13 @@ FROM golang:1.23-alpine AS builder
 
 WORKDIR /app
 
-# Copy module files and download dependencies
 COPY go.mod go.sum ./
 RUN go mod download
 
 # Copy all source code
 COPY . .
 
-# Build the application
+# Build the binary
 RUN CGO_ENABLED=0 GOOS=linux go build -o app ./cmd/api-server/main.go
 
 # Use a minimal image for the final build (5 MB)
@@ -19,9 +18,7 @@ FROM alpine:latest
 # Copy "app" binary built in builder
 WORKDIR /app
 COPY --from=builder /app/app .
-COPY --from=builder /app/.env .
 
 EXPOSE 50051
 
-# Run the application
 ENTRYPOINT ["/app/app"]
