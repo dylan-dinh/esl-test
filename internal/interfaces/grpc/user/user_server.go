@@ -10,10 +10,10 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-// UserServer implements UserServiceServer
+// UserServer implements UserServiceServer and we inject the user service
 type UserServer struct {
 	UnimplementedUserServiceServer
-	service domainUser.Service // This is the user service injected
+	service domainUser.Service
 }
 
 // NewUserServer creates a new UserServer with the given service.
@@ -21,7 +21,7 @@ func NewUserServer(svc domainUser.Service) *UserServer {
 	return &UserServer{service: svc}
 }
 
-// CreateUser is the gRPC method to create a user
+// CreateUser is the RPC method to create a user
 func (s *UserServer) CreateUser(ctx context.Context, req *CreateUserRequest) (*CreateUserResponse, error) {
 	newUser := &domainUser.User{
 		FirstName: req.GetFirstName(),
@@ -44,6 +44,7 @@ func (s *UserServer) CreateUser(ctx context.Context, req *CreateUserRequest) (*C
 	}, nil
 }
 
+// UpdateUser is the RPC method to update a user information
 func (s *UserServer) UpdateUser(ctx context.Context, req *UpdateUserRequest) (*UpdateUserResponse, error) {
 	updatedUser := &domainUser.User{
 		ID:        req.GetId(),
@@ -65,6 +66,7 @@ func (s *UserServer) UpdateUser(ctx context.Context, req *UpdateUserRequest) (*U
 	}, nil
 }
 
+// DeleteUser is the RPC method to delete a user
 func (s *UserServer) DeleteUser(ctx context.Context, req *DeleteUserRequest) (*DeleteUserResponse, error) {
 	if err := s.service.DeleteUser(ctx, req.GetId()); err != nil {
 		return &DeleteUserResponse{}, err
@@ -74,6 +76,7 @@ func (s *UserServer) DeleteUser(ctx context.Context, req *DeleteUserRequest) (*D
 	}, nil
 }
 
+// GetUser is the RPC method to get a user information
 func (s *UserServer) GetUser(ctx context.Context, req *GetUserRequest) (*GetUserResponse, error) {
 	var user *domainUser.User
 	var err error
