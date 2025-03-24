@@ -55,9 +55,21 @@ message GetUserResponse {
   string country = 5;
 }
 
+message GetUserRequestCountryFilter {
+  string country = 1;
+}
+
+message GetUserCountryFilterResponse {
+  string first_name = 1;
+  string last_name = 2;
+  string nickname = 3;
+  string email = 4;
+  string country = 5;
+}
+
 service UserService {
   rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
   rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse);
   rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse);
-  rpc GetUser(GetUserRequest) returns (GetUserResponse);
+  rpc GetUserById(GetUserRequest) returns (GetUserResponse);
 }

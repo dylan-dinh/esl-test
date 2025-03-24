@@ -76,8 +76,8 @@ func (s *UserServer) DeleteUser(ctx context.Context, req *DeleteUserRequest) (*D
 	}, nil
 }
 
-// GetUser is the RPC method to get a user information
-func (s *UserServer) GetUser(ctx context.Context, req *GetUserRequest) (*GetUserResponse, error) {
+// GetUserById is the RPC method to get a user information by ID
+func (s *UserServer) GetUserById(ctx context.Context, req *GetUserRequest) (*GetUserResponse, error) {
 	var user *domainUser.User
 	var err error
 
