@@ -22,6 +22,8 @@ func TestConfig(t *testing.T) {
 DB_HOST=localhost
 DB_PORT=27017
 DB_NAME=testdb
+RABBIT_HOST=rabbitmq
+RABBIT_PORT=5672
 `,
 			shouldSucceed: true,
 			expected: Config{

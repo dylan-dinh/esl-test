@@ -8,8 +8,10 @@ RUN go mod download
 
 # Copy all source code
 COPY . .
+COPY infra/wait-for-it.sh /wait-for-it.sh
 
 # Build the binary
+RUN chmod +x /wait-for-it.sh
 RUN CGO_ENABLED=0 GOOS=linux go build -o app ./cmd/api-server/main.go
 
 # Use a minimal image for the final build (5 MB)
@@ -18,7 +20,10 @@ FROM alpine:latest
 # Copy "app" binary built in builder
 WORKDIR /app
 COPY --from=builder /app/app .
+COPY --from=builder /wait-for-it.sh /wait-for-it.sh
+
+RUN apk add --no-cache bash
 
 EXPOSE 50051
 
-ENTRYPOINT ["/app/app"]
+ENTRYPOINT ["/wait-for-it.sh", "rabbitmq:5672", "--", "/wait-for-it.sh", "mongodb:27017", "--", "/app/app"]

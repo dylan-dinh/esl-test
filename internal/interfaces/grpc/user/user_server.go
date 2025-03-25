@@ -2,9 +2,9 @@ package user
 
 import (
 	"context"
+	service2 "github.com/dylan-dinh/esl-test/internal/domain/user"
 	"time"
 
-	domainUser "github.com/dylan-dinh/esl-test/internal/domain/user"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -13,17 +13,17 @@ import (
 // UserServer implements UserServiceServer and we inject the user service
 type UserServer struct {
 	UnimplementedUserServiceServer
-	service domainUser.Service
+	service service2.Service
 }
 
 // NewUserServer creates a new UserServer with the given service.
-func NewUserServer(svc domainUser.Service) *UserServer {
+func NewUserServer(svc service2.Service) *UserServer {
 	return &UserServer{service: svc}
 }
 
 // CreateUser is the RPC method to create a user
 func (s *UserServer) CreateUser(ctx context.Context, req *CreateUserRequest) (*CreateUserResponse, error) {
-	newUser := &domainUser.User{
+	newUser := &service2.User{
 		FirstName: req.FirstName,
 		LastName:  req.LastName,
 		Nickname:  req.Nickname,
@@ -46,7 +46,7 @@ func (s *UserServer) CreateUser(ctx context.Context, req *CreateUserRequest) (*C
 
 // UpdateUser is the RPC method to update a user information
 func (s *UserServer) UpdateUser(ctx context.Context, req *UpdateUserRequest) (*UpdateUserResponse, error) {
-	updatedUser := &domainUser.User{
+	updatedUser := &service2.User{
 		ID:        req.Id,
 		FirstName: req.FirstName,
 		LastName:  req.LastName,
@@ -78,7 +78,7 @@ func (s *UserServer) DeleteUser(ctx context.Context, req *DeleteUserRequest) (*D
 
 // GetUserById is the RPC method to get a user information by ID
 func (s *UserServer) GetUserById(ctx context.Context, req *GetUserRequest) (*GetUserResponse, error) {
-	var user *domainUser.User
+	var user *service2.User
 	var err error
 
 	if user, err = s.service.GetUser(ctx, req.Id); err != nil {
@@ -96,7 +96,7 @@ func (s *UserServer) GetUserById(ctx context.Context, req *GetUserRequest) (*Get
 
 // ListUsers implements the ListUsers RPC.
 func (s *UserServer) ListUsers(ctx context.Context, req *ListUsersRequest) (*ListUsersResponse, error) {
-	filter := &domainUser.UserFilter{
+	filter := &service2.UserFilter{
 		FirstName: req.FirstName,
 		LastName:  req.LastName,
 		Country:   req.Country,

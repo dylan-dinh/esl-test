@@ -20,7 +20,7 @@ type UserRepository struct {
 }
 
 // NewUserRepository crée une instance de UserRepository.
-func NewUserRepository(conn *mongo.Client, dbName string) *UserRepository {
+func NewUserRepository(conn *mongo.Client, dbName string) (*UserRepository, error) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	coll := conn.Database(dbName).Collection(collectionName)
 
@@ -29,20 +29,19 @@ func NewUserRepository(conn *mongo.Client, dbName string) *UserRepository {
 		Options: options.Index().SetUnique(true),
 	}
 
-	if _, err := coll.Indexes().CreateOne(context.Background(), constraint); err != nil {
-		var cmdErr mongo.CommandError
-		if errors.As(err, &cmdErr) && cmdErr.Code == 85 {
-			// index already exists, safe to ignore
-		} else {
-			logger.Error("fail to create unicity on email")
-		}
+	// Create index commands will not recreate existing indexes
+	// and instead return success
+	_, err := coll.Indexes().CreateOne(context.Background(), constraint)
+	if err != nil {
+		logger.Error("error creating index ", "error", err.Error())
+		return nil, err
 	}
 	logger.Info("unicity on users.email created")
 
 	return &UserRepository{
 		coll:   coll,
 		logger: logger,
-	}
+	}, nil
 }
 
 func (r *UserRepository) Create(ctx context.Context, u *user.User) error {
@@ -72,7 +71,7 @@ func (r *UserRepository) Update(ctx context.Context, u *user.User) error {
 	res := r.coll.FindOneAndUpdate(ctx, filter, update)
 	if res.Err() != nil {
 		if errors.Is(res.Err(), mongo.ErrNoDocuments) {
-			r.logger.Error("user not found", "id", "id", u.ID, u.ID)
+			r.logger.Error("user not found", "id", u.ID)
 			return res.Err()
 		}
 	}

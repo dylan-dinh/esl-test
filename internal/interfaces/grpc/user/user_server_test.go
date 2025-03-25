@@ -5,13 +5,13 @@ package user
 
 import (
 	"context"
+	"github.com/dylan-dinh/esl-test/internal/domain/user"
 	"github.com/stretchr/testify/require"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/dylan-dinh/esl-test/internal/config"
-	"github.com/dylan-dinh/esl-test/internal/domain/user"
 	"github.com/dylan-dinh/esl-test/internal/infrastructure/persistence/db"
 	"github.com/dylan-dinh/esl-test/internal/infrastructure/persistence/repository"
 	"github.com/stretchr/testify/assert"
@@ -21,15 +21,6 @@ import (
 // creates the DB connection and returns the user service and a cleanup function.
 func setupIntegrationTest(t *testing.T) (user.Service, func()) {
 	t.Helper()
-
-	// Write a temporary .env file.
-	//envContent := `GRPC_PORT=50051
-	//DB_HOST=localhost
-	//DB_PORT=27017
-	//DB_NAME=testdb
-	//`
-	//err := os.WriteFile(".env", []byte(envContent), 0644)
-	//require.NoError(t, err)
 
 	conf, err := config.GetConfig()
 	require.NoError(t, err)

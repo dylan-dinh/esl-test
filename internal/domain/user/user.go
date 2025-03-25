@@ -13,7 +13,7 @@ type User struct {
 	Nickname  string
 	Email     string
 	Country   string
-	Password  string    // hash it
+	Password  string
 	CreatedAt time.Time `bson:"created_at"`
 	UpdatedAt time.Time `bson:"updated_at"`
 }

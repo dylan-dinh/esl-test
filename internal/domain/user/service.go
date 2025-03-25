@@ -16,6 +16,12 @@ var (
 	ErrEmailExists          = errors.New("email already exists")
 )
 
+type Notifier interface {
+	UserCreatedEvent(ctx context.Context, user *User) error
+	UserUpdatedEvent(ctx context.Context, user *User) error
+	UserDeletedEvent(ctx context.Context, id string) error
+}
+
 // Service define the interface for the business logic of the User entity
 type Service interface {
 	CreateUser(ctx context.Context, u *User) error
@@ -28,12 +34,13 @@ type Service interface {
 // userService is the concrete implementation of the Service interface
 type userService struct {
 	repo   Repository
+	mq     Notifier
 	logger *slog.Logger
 }
 
-func NewUserService(repo Repository) Service {
+func NewUserService(repo Repository, mq Notifier) Service {
 	handler := slog.NewTextHandler(os.Stdout, nil)
-	return &userService{repo: repo, logger: slog.New(handler)}
+	return &userService{repo: repo, logger: slog.New(handler), mq: mq}
 }
 
 // CreateUser create a user using the repository
@@ -59,7 +66,21 @@ func (s *userService) CreateUser(ctx context.Context, u *User) error {
 		return err
 	}
 	u.Password = string(password)
-	return s.repo.Create(ctx, u)
+
+	if err = s.repo.Create(ctx, u); err != nil {
+		return err
+	}
+
+	// fire and forget
+	go func(u *User) {
+		rabbitCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		if err := s.mq.UserCreatedEvent(rabbitCtx, u); err != nil {
+			slog.Error("failed to publish UserCreated event", "user_id", u.ID, "error", err)
+		}
+	}(u)
+
+	return nil
 }
 
 // UpdateUser update the user data and updated at timestamp
@@ -71,11 +92,26 @@ func (s *userService) UpdateUser(ctx context.Context, u *User) error {
 	}
 	u.Password = string(password)
 
+	go func(u *User) {
+		rabbitCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		if err := s.mq.UserUpdatedEvent(rabbitCtx, u); err != nil {
+			slog.Error("failed to publish UserUpdated event", "user_id", u.ID, "error", err)
+		}
+	}(u)
+
 	return s.repo.Update(ctx, u)
 }
 
 // DeleteUser delete a user by its ID
 func (s *userService) DeleteUser(ctx context.Context, id string) error {
+	go func(id string) {
+		rabbitCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		if err := s.mq.UserDeletedEvent(rabbitCtx, id); err != nil {
+			slog.Error("failed to publish UserUpdated event", "user_id", id, "error", err)
+		}
+	}(id)
 	return s.repo.DeleteByID(ctx, id)
 }
 

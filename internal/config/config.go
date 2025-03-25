@@ -8,17 +8,21 @@ import (
 )
 
 const (
-	keyGrpcPort = "GRPC_PORT"
-	keyDbHost   = "DB_HOST"
-	keyDbPort   = "DB_PORT"
-	keyDbName   = "DB_NAME"
+	keyGrpcPort   = "GRPC_PORT"
+	keyDbHost     = "DB_HOST"
+	keyDbPort     = "DB_PORT"
+	keyDbName     = "DB_NAME"
+	keyRabbitHost = "RABBIT_HOST"
+	keyRabbitPort = "RABBIT_PORT"
 )
 
 type Config struct {
-	GrpcPort string
-	DbHost   string
-	DbPort   string
-	DbName   string
+	GrpcPort   string
+	DbHost     string
+	DbPort     string
+	DbName     string
+	RabbitHost string
+	RabbitPort string
 }
 
 func GetConfig() (Config, error) {
@@ -29,7 +33,7 @@ func GetConfig() (Config, error) {
 		return Config{}, fmt.Errorf("loading .env: %w", err)
 	}
 
-	var grpcPort, dbHost, dbPort, dbName string
+	var grpcPort, dbHost, dbPort, dbName, rabbitHost, rabbitPort string
 	if grpcPort = os.Getenv(keyGrpcPort); grpcPort == "" {
 		return Config{}, errors.New(fmt.Sprintf("env var %s not set", keyGrpcPort))
 	}
@@ -46,10 +50,20 @@ func GetConfig() (Config, error) {
 		return Config{}, errors.New(fmt.Sprintf("env var %s not set", keyDbName))
 	}
 
+	if rabbitHost = os.Getenv(keyRabbitHost); rabbitHost == "" {
+		return Config{}, errors.New(fmt.Sprintf("env var %s not set", keyRabbitHost))
+	}
+
+	if rabbitPort = os.Getenv(keyRabbitPort); rabbitPort == "" {
+		return Config{}, errors.New(fmt.Sprintf("env var %s not set", keyRabbitPort))
+	}
+
 	return Config{
-		GrpcPort: grpcPort,
-		DbHost:   dbHost,
-		DbPort:   dbPort,
-		DbName:   dbName,
+		GrpcPort:   grpcPort,
+		DbHost:     dbHost,
+		DbPort:     dbPort,
+		DbName:     dbName,
+		RabbitHost: rabbitHost,
+		RabbitPort: rabbitPort,
 	}, nil
 }

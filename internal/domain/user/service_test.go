@@ -6,15 +6,25 @@ import (
 	"testing"
 )
 
+type fakeNotifier struct{}
+
+func (r *fakeNotifier) UserCreatedEvent(ctx context.Context, u *User) error { return nil }
+
+func (r *fakeNotifier) UserUpdatedEvent(ctx context.Context, u *User) error { return nil }
+
+func (r *fakeNotifier) UserDeletedEvent(ctx context.Context, id string) error { return nil }
+
 type fakeRepo struct {
 	exists bool
 	err    error
 }
 
-func (f *fakeRepo) Create(ctx context.Context, u *User) error            { return nil }
-func (f *fakeRepo) Update(ctx context.Context, u *User) error            { return nil }
-func (f *fakeRepo) DeleteByID(ctx context.Context, id string) error      { return nil }
-func (f *fakeRepo) GetByID(ctx context.Context, id string) (User, error) { return User{}, nil }
+func (f *fakeRepo) Create(ctx context.Context, u *User) error       { return nil }
+func (f *fakeRepo) Update(ctx context.Context, u *User) error       { return nil }
+func (f *fakeRepo) DeleteByID(ctx context.Context, id string) error { return nil }
+func (f *fakeRepo) GetByID(ctx context.Context, id string) (User, error) {
+	return User{}, nil
+}
 func (f *fakeRepo) List(ctx context.Context, filter *UserFilter) ([]User, int64, error) {
 	return []User{}, 0, nil
 }
@@ -23,6 +33,7 @@ func (f *fakeRepo) ExistsByEmail(ctx context.Context, email string) (bool, error
 }
 
 func TestCreateUserValidation(t *testing.T) {
+	notifier := &fakeNotifier{}
 	cases := []struct {
 		name    string
 		input   *User
@@ -89,7 +100,7 @@ func TestCreateUserValidation(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			svc := NewUserService(tc.repo)
+			svc := NewUserService(tc.repo, notifier)
 			err := svc.CreateUser(context.Background(), tc.input)
 			if tc.wantErr != nil {
 				assert.ErrorIs(t, err, tc.wantErr)

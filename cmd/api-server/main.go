@@ -8,6 +8,7 @@ import (
 	"github.com/dylan-dinh/esl-test/internal/infrastructure/persistence/db"
 	"github.com/dylan-dinh/esl-test/internal/infrastructure/persistence/repository"
 	pb "github.com/dylan-dinh/esl-test/internal/interfaces/grpc/user"
+	"github.com/dylan-dinh/esl-test/internal/interfaces/notifier"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
@@ -28,21 +29,39 @@ func main() {
 		panic(err)
 	}
 
+	rabbitConn, err := notifier.NewRabbitMQConn(conf)
+	if err != nil {
+		panic(err)
+	}
+	defer func() {
+		if err := rabbitConn.Close(); err != nil {
+			logger.Error("error disconnecting from rabbit", "error", err)
+		}
+	}()
+
+	mq, err := user.NewRabbitMQ(rabbitConn)
+	if err != nil {
+		panic(err)
+	}
+
 	newDb, err := db.NewDb(conf)
 	if err != nil {
 		panic(err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	defer func() {
 		if err := newDb.DB.Disconnect(ctx); err != nil {
-			logger.Error("Error disconnecting from DB", "error", err)
+			logger.Error("error disconnecting from DB", "error", err)
 		}
 	}()
 
-	userRepo := repository.NewUserRepository(newDb.DB, conf.DbName)
-	userService := user.NewUserService(userRepo)
+	userRepo, err := repository.NewUserRepository(newDb.DB, conf.DbName)
+	if err != nil {
+		panic(err)
+	}
+	userService := user.NewUserService(userRepo, mq)
 	userServer := pb.NewUserServer(userService)
 
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%s", conf.GrpcPort))

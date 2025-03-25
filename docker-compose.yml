@@ -1,4 +1,18 @@
 services:
+
+  mongodb:
+    image: mongo:6.0.21
+    restart: always
+    ports:
+      - "27017:27017"
+    tmpfs:
+      - /data/db
+
+  rabbitmq:
+    image: rabbitmq:4.0-management
+    ports:
+      - "5672:5672"
+
   app:
     build:
       context: .
@@ -9,17 +23,12 @@ services:
       - GRPC_PORT=50051
       - DB_HOST=mongodb
       - DB_PORT=27017
-      - DB_NAME=testdb
+      - DB_NAME=esl
+      - RABBIT_HOST=rabbitmq
+      - RABBIT_PORT=5672
     depends_on:
       - mongodb
-
-  mongodb:
-    image: mongo:6.0.21
-    restart: always
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo-data:/data/db
+      - rabbitmq
 
 volumes:
   mongo-data:

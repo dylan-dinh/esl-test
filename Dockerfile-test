@@ -6,6 +6,9 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
+COPY infra/wait-for-it.sh /wait-for-it.sh
+RUN chmod +x /wait-for-it.sh
+RUN apk add --no-cache bash
 
 
-CMD ["go", "test", "-v", "-tags=integration", "./..."]
+ENTRYPOINT ["/wait-for-it.sh", "mongodb:27017", "--", "/wait-for-it.sh", "rabbitmq:5672", "--", "go", "test", "-v", "-tags=integration", "./..."]

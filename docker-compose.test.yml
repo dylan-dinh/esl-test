@@ -7,6 +7,11 @@ services:
     tmpfs:
       - /data/db
 
+  rabbitmq:
+    image: rabbitmq:4.0-management
+    ports:
+      - "5672:5672"
+
   tests:
     build:
       context: .
@@ -16,8 +21,11 @@ services:
       - DB_HOST=mongodb
       - DB_PORT=27017
       - DB_NAME=testdb
+      - RABBIT_HOST=rabbitmq
+      - RABBIT_PORT=5672
     depends_on:
       - mongodb
+      - rabbitmq
 
 volumes:
   mongo-data:
