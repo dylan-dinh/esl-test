@@ -1,7 +1,7 @@
 # ESL‑Test User Service
 
 A lightweight Go microservice exposing a gRPC API to manage Users (create, read, update, delete, and list with pagination + filters). 
-Built with Go, MongoDB and  Docker Compose.
+Built with Go, MongoDB RabbitMQ and Docker Compose.
 
 ---
 
@@ -32,7 +32,7 @@ Create a `.env` file at project root (or use the provided template):
 
 ```env
 GRPC_PORT=50051
-DB_HOST=mongodb
+DB_HOST=localhost
 DB_PORT=27017
 DB_NAME=esl
 RABBIT_HOST=rabbitmq
@@ -164,7 +164,7 @@ I implemented a handler/service/repository pattern :
 
 ## Logging and error
 - Using Go's slog package
-- Listening for signal leading to mongo being disconnected and graceful shutdown of gRPC server
+- Listening for signal to gracefully shutdown the gRPC server
 
 ---
 
