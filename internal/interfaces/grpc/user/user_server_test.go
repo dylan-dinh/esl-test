@@ -1,3 +1,6 @@
+//go:build integration
+// +build integration
+
 package user
 
 import (
@@ -15,6 +18,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// declareAndBindQueue create a new destroyable queue, apart from the main queue, and
+// binding it to my exchange, only see message from the routingKey params
 func declareAndBindQueue(t *testing.T, mq *user.RabbitMQ, routingKey string) string {
 	q, err := mq.Ch.QueueDeclare("", false, true, true, false, nil)
 	require.NoError(t, err)
@@ -24,6 +29,9 @@ func declareAndBindQueue(t *testing.T, mq *user.RabbitMQ, routingKey string) str
 	return q.Name
 }
 
+// assertPublished helper func to be allowed to compare any type of data
+// Below we only compare ID but in the future we might compare more complex and different object
+// thus the generic parameter
 func assertPublished[T any](t *testing.T, mq *user.RabbitMQ, queueName string, assertFn func(t *testing.T, actual T)) {
 	msgs, err := mq.Ch.Consume(queueName, "", true, true, false, false, nil)
 	assert.NoError(t, err)
@@ -31,8 +39,6 @@ func assertPublished[T any](t *testing.T, mq *user.RabbitMQ, queueName string, a
 	case msg := <-msgs:
 		var actual T
 		require.NoError(t, json.Unmarshal(msg.Body, &actual))
-		// I did this because I had mismatch on timestamp
-		// when comparing whole User object
 		if assertFn != nil {
 			assertFn(t, actual)
 		} else {
@@ -43,8 +49,8 @@ func assertPublished[T any](t *testing.T, mq *user.RabbitMQ, queueName string, a
 	}
 }
 
-// setupIntegrationTest creates a temporary directory, writes a .env file in it
-// creates the DB connection and returns the user service and a cleanup function.
+// setupIntegrationTest creates the DB connection, Rabbit connection and User Service
+// returns the user service, cleanup function and the notifier
 func setupIntegrationTest(t *testing.T) (user.Service, func(), *user.RabbitMQ) {
 	t.Helper()
 
@@ -75,6 +81,8 @@ func setupIntegrationTest(t *testing.T) (user.Service, func(), *user.RabbitMQ) {
 	return userSvc, cleanup, mq
 }
 
+// TestCreateUserIntegration test user creation and assert that message
+// is received in the rabbit
 func TestCreateUserIntegration(t *testing.T) {
 	userSvc, cleanup, mq := setupIntegrationTest(t)
 	defer cleanup()
@@ -100,6 +108,8 @@ func TestCreateUserIntegration(t *testing.T) {
 	assert.NotEmpty(t, testUser.ID, "User ID should be generated")
 }
 
+// TestCreateUserIntegration test user update and assert that message
+// is received in the rabbit
 func TestUpdateUserIntegration(t *testing.T) {
 	userSvc, cleanup, mq := setupIntegrationTest(t)
 	defer cleanup()
@@ -147,6 +157,8 @@ func TestUpdateUserIntegration(t *testing.T) {
 	assert.Equal(t, "UK", updatedUser.Country, "Country should be updated")
 }
 
+// TestCreateUserIntegration test user delete and assert that message
+// is received in the rabbit
 func TestDeleteUserIntegration(t *testing.T) {
 	userSvc, cleanup, mq := setupIntegrationTest(t)
 	defer cleanup()

@@ -76,12 +76,10 @@ DB_PORT=27017
 			// Clear environment variables before running each test case
 			os.Clearenv()
 
-			// Write temporary .env file
 			err := os.WriteFile(".env", []byte(tc.envContent), 0644)
 			if err != nil {
 				t.Fatalf("Failed to create temporary .env file: %v", err)
 			}
-			// Ensure .env is removed after the test
 			defer os.Remove(".env")
 
 			conf, err := GetConfig()

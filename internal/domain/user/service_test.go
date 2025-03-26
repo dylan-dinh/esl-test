@@ -32,6 +32,7 @@ func (f *fakeRepo) ExistsByEmail(ctx context.Context, email string) (bool, error
 	return f.exists, f.err
 }
 
+// TestCreateUserValidation test payload integrity following business rules
 func TestCreateUserValidation(t *testing.T) {
 	notifier := &fakeNotifier{}
 	cases := []struct {

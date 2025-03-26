@@ -7,6 +7,7 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 	"log/slog"
 	"os"
+	"time"
 )
 
 const (
@@ -24,6 +25,9 @@ type RabbitMQ struct {
 	confirms chan amqp.Confirmation
 }
 
+// NewRabbitMQ takes the Rabbit connection, create one exchange and one queue
+// Wildcard on user.* to match user create, update and delete
+// Use of Confirm to ensure all message are received
 func NewRabbitMQ(conn *amqp.Connection) (*RabbitMQ, error) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
@@ -62,9 +66,10 @@ func NewRabbitMQ(conn *amqp.Connection) (*RabbitMQ, error) {
 	}, nil
 }
 
+// publishAndConfirm is a helper func to be reused to publish message
 func (r *RabbitMQ) publishAndConfirm(ctx context.Context, routingKey string, body []byte) error {
 	if err := r.Ch.Publish(exchangeName, routingKey, false, false,
-		amqp.Publishing{ContentType: "application/json", Body: body},
+		amqp.Publishing{ContentType: "application/json", Body: body, Timestamp: time.Now()},
 	); err != nil {
 		return err
 	}
@@ -82,6 +87,7 @@ func (r *RabbitMQ) publishAndConfirm(ctx context.Context, routingKey string, bod
 	}
 }
 
+// UserCreatedEvent handle the user created event
 func (r *RabbitMQ) UserCreatedEvent(ctx context.Context, u *User) error {
 	body, err := json.Marshal(u)
 	if err != nil {
@@ -90,6 +96,7 @@ func (r *RabbitMQ) UserCreatedEvent(ctx context.Context, u *User) error {
 	return r.publishAndConfirm(ctx, UserCreatedRoutingKey, body)
 }
 
+// UserUpdatedEvent handle the user updated event
 func (r *RabbitMQ) UserUpdatedEvent(ctx context.Context, u *User) error {
 	body, err := json.Marshal(u)
 	if err != nil {
@@ -99,6 +106,7 @@ func (r *RabbitMQ) UserUpdatedEvent(ctx context.Context, u *User) error {
 	return r.publishAndConfirm(ctx, UserUpdatedRoutingKey, body)
 }
 
+// UserDeletedEvent handle the user deleted event
 func (r *RabbitMQ) UserDeletedEvent(ctx context.Context, id string) error {
 	body, err := json.Marshal(id) // produces a quoted JSON string
 	if err != nil {

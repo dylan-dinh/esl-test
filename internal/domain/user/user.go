@@ -28,6 +28,7 @@ type UserFilter struct {
 }
 
 // Repository define the interface to interact with the entity User
+// It serves the mongoDB
 type Repository interface {
 	Create(context.Context, *User) error
 	Update(context.Context, *User) error

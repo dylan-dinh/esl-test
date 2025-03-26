@@ -19,7 +19,7 @@ type UserRepository struct {
 	logger *slog.Logger
 }
 
-// NewUserRepository crée une instance de UserRepository.
+// NewUserRepository create an instance of  UserRepository
 func NewUserRepository(conn *mongo.Client, dbName string) (*UserRepository, error) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	coll := conn.Database(dbName).Collection(collectionName)
@@ -30,7 +30,8 @@ func NewUserRepository(conn *mongo.Client, dbName string) (*UserRepository, erro
 	}
 
 	// Create index commands will not recreate existing indexes
-	// and instead return success
+	// and instead return success so it's safe to call it even though the
+	// index already exists
 	_, err := coll.Indexes().CreateOne(context.Background(), constraint)
 	if err != nil {
 		logger.Error("error creating index ", "error", err.Error())
@@ -44,6 +45,7 @@ func NewUserRepository(conn *mongo.Client, dbName string) (*UserRepository, erro
 	}, nil
 }
 
+// Create a user in DB
 func (r *UserRepository) Create(ctx context.Context, u *user.User) error {
 	_, err := r.coll.InsertOne(ctx, &u)
 	if err != nil {
@@ -55,6 +57,7 @@ func (r *UserRepository) Create(ctx context.Context, u *user.User) error {
 	return nil
 }
 
+// Update a user in DB filtering by UUID
 func (r *UserRepository) Update(ctx context.Context, u *user.User) error {
 	filter := bson.D{{"id", u.ID}}
 	update := bson.D{{
@@ -79,6 +82,7 @@ func (r *UserRepository) Update(ctx context.Context, u *user.User) error {
 	return nil
 }
 
+// DeleteByID deletes a user by UUID
 func (r *UserRepository) DeleteByID(ctx context.Context, id string) error {
 	filter := bson.D{{"id", id}}
 
@@ -97,6 +101,7 @@ func (r *UserRepository) DeleteByID(ctx context.Context, id string) error {
 	return nil
 }
 
+// GetByID get user by UUID
 func (r *UserRepository) GetByID(ctx context.Context, id string) (user.User, error) {
 	filter := bson.D{{"id", id}}
 
@@ -121,6 +126,9 @@ func (r *UserRepository) GetByID(ctx context.Context, id string) (user.User, err
 
 }
 
+// List users using first_name, last_name and country filter
+// Pagination is also available
+// We count documents and return the result as well
 func (r *UserRepository) List(ctx context.Context, filter *user.UserFilter) ([]user.User, int64, error) {
 	query := bson.D{}
 	if filter.FirstName != "" {
@@ -153,6 +161,7 @@ func (r *UserRepository) List(ctx context.Context, filter *user.UserFilter) ([]u
 	return users, total, nil
 }
 
+// ExistsByEmail check if a user exists by its email
 func (r *UserRepository) ExistsByEmail(ctx context.Context, email string) (bool, error) {
 	filter := bson.D{{Key: "email", Value: email}}
 	err := r.coll.FindOne(ctx, filter).Err()

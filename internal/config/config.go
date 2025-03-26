@@ -25,6 +25,7 @@ type Config struct {
 	RabbitPort string
 }
 
+// GetConfig load either by .env file or in env directly
 func GetConfig() (Config, error) {
 	// I did this because in docker-compose for test I couldn't load env file
 	// So I passed environment value

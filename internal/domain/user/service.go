@@ -32,6 +32,7 @@ type Service interface {
 }
 
 // userService is the concrete implementation of the Service interface
+// We inject the user Repository and the Notifier interfaces
 type userService struct {
 	repo   Repository
 	mq     Notifier
@@ -44,6 +45,7 @@ func NewUserService(repo Repository, mq Notifier) Service {
 }
 
 // CreateUser create a user using the repository
+// Start a routine to send a user created message to the broker
 func (s *userService) CreateUser(ctx context.Context, u *User) error {
 	if u.Email == "" || u.Password == "" {
 		return ErrMissingEmailPassword
@@ -84,6 +86,7 @@ func (s *userService) CreateUser(ctx context.Context, u *User) error {
 }
 
 // UpdateUser update the user data and updated at timestamp
+// Start a routine to send an update user message to the broker
 func (s *userService) UpdateUser(ctx context.Context, u *User) error {
 	u.UpdatedAt = time.Now()
 	password, err := bcrypt.GenerateFromPassword([]byte(u.Password), 10)
@@ -104,6 +107,7 @@ func (s *userService) UpdateUser(ctx context.Context, u *User) error {
 }
 
 // DeleteUser delete a user by its ID
+// Start a routine to send a delete user message to the broker
 func (s *userService) DeleteUser(ctx context.Context, id string) error {
 	go func(id string) {
 		rabbitCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)

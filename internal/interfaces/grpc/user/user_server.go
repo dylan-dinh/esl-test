@@ -2,7 +2,7 @@ package user
 
 import (
 	"context"
-	service2 "github.com/dylan-dinh/esl-test/internal/domain/user"
+	"github.com/dylan-dinh/esl-test/internal/domain/user"
 	"time"
 
 	"google.golang.org/grpc/codes"
@@ -13,17 +13,17 @@ import (
 // UserServer implements UserServiceServer and we inject the user service
 type UserServer struct {
 	UnimplementedUserServiceServer
-	service service2.Service
+	service user.Service
 }
 
 // NewUserServer creates a new UserServer with the given service.
-func NewUserServer(svc service2.Service) *UserServer {
+func NewUserServer(svc user.Service) *UserServer {
 	return &UserServer{service: svc}
 }
 
 // CreateUser is the RPC method to create a user
 func (s *UserServer) CreateUser(ctx context.Context, req *CreateUserRequest) (*CreateUserResponse, error) {
-	newUser := &service2.User{
+	newUser := &user.User{
 		FirstName: req.FirstName,
 		LastName:  req.LastName,
 		Nickname:  req.Nickname,
@@ -46,7 +46,7 @@ func (s *UserServer) CreateUser(ctx context.Context, req *CreateUserRequest) (*C
 
 // UpdateUser is the RPC method to update a user information
 func (s *UserServer) UpdateUser(ctx context.Context, req *UpdateUserRequest) (*UpdateUserResponse, error) {
-	updatedUser := &service2.User{
+	updatedUser := &user.User{
 		ID:        req.Id,
 		FirstName: req.FirstName,
 		LastName:  req.LastName,
@@ -78,25 +78,25 @@ func (s *UserServer) DeleteUser(ctx context.Context, req *DeleteUserRequest) (*D
 
 // GetUserById is the RPC method to get a user information by ID
 func (s *UserServer) GetUserById(ctx context.Context, req *GetUserRequest) (*GetUserResponse, error) {
-	var user *service2.User
+	var u *user.User
 	var err error
 
-	if user, err = s.service.GetUser(ctx, req.Id); err != nil {
+	if u, err = s.service.GetUser(ctx, req.Id); err != nil {
 		return nil, err
 	}
 
 	return &GetUserResponse{
-		FirstName: user.FirstName,
-		LastName:  user.LastName,
-		Nickname:  user.Nickname,
-		Email:     user.Email,
-		Country:   user.Country,
+		FirstName: u.FirstName,
+		LastName:  u.LastName,
+		Nickname:  u.Nickname,
+		Email:     u.Email,
+		Country:   u.Country,
 	}, nil
 }
 
 // ListUsers implements the ListUsers RPC.
 func (s *UserServer) ListUsers(ctx context.Context, req *ListUsersRequest) (*ListUsersResponse, error) {
-	filter := &service2.UserFilter{
+	filter := &user.UserFilter{
 		FirstName: req.FirstName,
 		LastName:  req.LastName,
 		Country:   req.Country,

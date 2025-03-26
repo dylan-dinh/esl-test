@@ -137,7 +137,7 @@ Run all tests (unit + integration) in isolation:
 ```test
 docker-compose -f docker-compose.test.yml up --build --abort-on-container-exit
 ```
-Integration tests use an in‑memory MongoDB
+Integration tests use a temporary db volume
 Database is wiped after each run
 
 ---
@@ -150,12 +150,14 @@ I implemented a handler/service/repository pattern :
 ├── cmd/api-server/main.go         # gRPC server entrypoint
 ├── proto/user.proto               # Protobuf definitions
 ├── internal/
-│   ├── domain/user                # Entity + service interface
+│   ├── domain/user                # Entity + service interface + notifier
 │   ├── infrastructure/persistence # db and user repository
 │   └── interfaces/grpc/user       # gRPC handlers
+│   └──interfaces/notifiter            # RabbitMQ connection
+│
 ├── Dockerfile-app                 # Production build
-├── docker-compose.yml             # App + MongoDB
-└── docker-compose.test.yml        # Tests + ephemeral MongoDB
+├── docker-compose.yml             # App + persistent MongoDB + RabbitMQ
+└── docker-compose.test.yml        # Tests + temp MongoDB + RabbitMQ
 ```
 
 ---
@@ -167,6 +169,7 @@ I implemented a handler/service/repository pattern :
 ---
 
 ## Next step
-- Add TLS to gRPC in production
+- Add TLS to gRPC
 - Expose Prometheus metrics endpoint
 - Add new entity like Games for example
+- More test with mock of our interface like user.Repository

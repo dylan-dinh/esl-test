@@ -6,6 +6,7 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
+// NewRabbitMQConn create the RabbitMQ connection
 func NewRabbitMQConn(conf config.Config) (*amqp.Connection, error) {
 	conn, err := amqp.Dial(fmt.Sprintf("amqp://guest:guest@%s:%s/", conf.RabbitHost, conf.RabbitPort))
 	if err != nil {

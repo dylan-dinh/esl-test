@@ -13,6 +13,8 @@ import (
 	"time"
 )
 
+// TestNewDbIntegration test how react the mongoDB connection func
+// on bad and good config
 func TestNewDbIntegration(t *testing.T) {
 	type testCase struct {
 		name          string
