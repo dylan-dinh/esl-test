@@ -11,15 +11,15 @@ import (
 
 const (
 	exchangeName          = "user.events"
-	userCreatedRoutingKey = "user.created"
-	userUpdatedRoutingKey = "user.updated"
-	userDeletedRoutingKey = "user.deleted"
+	UserCreatedRoutingKey = "user.created"
+	UserUpdatedRoutingKey = "user.updated"
+	UserDeletedRoutingKey = "user.deleted"
 	queueName             = "user"
 )
 
 type RabbitMQ struct {
 	logger   *slog.Logger
-	ch       *amqp.Channel
+	Ch       *amqp.Channel
 	queue    amqp.Queue
 	confirms chan amqp.Confirmation
 }
@@ -56,14 +56,14 @@ func NewRabbitMQ(conn *amqp.Connection) (*RabbitMQ, error) {
 
 	return &RabbitMQ{
 		logger:   logger,
-		ch:       ch,
+		Ch:       ch,
 		queue:    queue,
 		confirms: confirms,
 	}, nil
 }
 
 func (r *RabbitMQ) publishAndConfirm(ctx context.Context, routingKey string, body []byte) error {
-	if err := r.ch.Publish(exchangeName, routingKey, false, false,
+	if err := r.Ch.Publish(exchangeName, routingKey, false, false,
 		amqp.Publishing{ContentType: "application/json", Body: body},
 	); err != nil {
 		return err
@@ -87,7 +87,7 @@ func (r *RabbitMQ) UserCreatedEvent(ctx context.Context, u *User) error {
 	if err != nil {
 		return err
 	}
-	return r.publishAndConfirm(ctx, userCreatedRoutingKey, body)
+	return r.publishAndConfirm(ctx, UserCreatedRoutingKey, body)
 }
 
 func (r *RabbitMQ) UserUpdatedEvent(ctx context.Context, u *User) error {
@@ -96,9 +96,13 @@ func (r *RabbitMQ) UserUpdatedEvent(ctx context.Context, u *User) error {
 		return err
 	}
 
-	return r.publishAndConfirm(ctx, userUpdatedRoutingKey, body)
+	return r.publishAndConfirm(ctx, UserUpdatedRoutingKey, body)
 }
 
 func (r *RabbitMQ) UserDeletedEvent(ctx context.Context, id string) error {
-	return r.publishAndConfirm(ctx, userDeletedRoutingKey, []byte(id))
+	body, err := json.Marshal(id) // produces a quoted JSON string
+	if err != nil {
+		return err
+	}
+	return r.publishAndConfirm(ctx, UserDeletedRoutingKey, body)
 }

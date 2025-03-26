@@ -1,13 +1,11 @@
-//go:build integration
-// +build integration
-
 package user
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/dylan-dinh/esl-test/internal/domain/user"
+	"github.com/dylan-dinh/esl-test/internal/interfaces/notifier"
 	"github.com/stretchr/testify/require"
-	"os"
 	"testing"
 	"time"
 
@@ -17,9 +15,37 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func declareAndBindQueue(t *testing.T, mq *user.RabbitMQ, routingKey string) string {
+	q, err := mq.Ch.QueueDeclare("", false, true, true, false, nil)
+	require.NoError(t, err)
+	err = mq.Ch.QueueBind(q.Name, routingKey, "user.events", false, nil)
+	require.NoError(t, err)
+
+	return q.Name
+}
+
+func assertPublished[T any](t *testing.T, mq *user.RabbitMQ, queueName string, assertFn func(t *testing.T, actual T)) {
+	msgs, err := mq.Ch.Consume(queueName, "", true, true, false, false, nil)
+	assert.NoError(t, err)
+	select {
+	case msg := <-msgs:
+		var actual T
+		require.NoError(t, json.Unmarshal(msg.Body, &actual))
+		// I did this because I had mismatch on timestamp
+		// when comparing whole User object
+		if assertFn != nil {
+			assertFn(t, actual)
+		} else {
+			t.Log("nothing to compare")
+		}
+	case <-time.After(4 * time.Second):
+		t.Fatalf("expected event but none arrived")
+	}
+}
+
 // setupIntegrationTest creates a temporary directory, writes a .env file in it
 // creates the DB connection and returns the user service and a cleanup function.
-func setupIntegrationTest(t *testing.T) (user.Service, func()) {
+func setupIntegrationTest(t *testing.T) (user.Service, func(), *user.RabbitMQ) {
 	t.Helper()
 
 	conf, err := config.GetConfig()
@@ -28,23 +54,32 @@ func setupIntegrationTest(t *testing.T) (user.Service, func()) {
 	newDb, err := db.NewDb(conf)
 	require.NoError(t, err)
 
-	userRepo := repository.NewUserRepository(newDb.DB, conf.DbName)
-	userSvc := user.NewUserService(userRepo)
+	rabbitConn, err := notifier.NewRabbitMQConn(conf)
+	require.NoError(t, err)
+
+	mq, err := user.NewRabbitMQ(rabbitConn)
+	require.NoError(t, err)
+
+	userRepo, err := repository.NewUserRepository(newDb.DB, conf.DbName)
+	require.NoError(t, err)
+	userSvc := user.NewUserService(userRepo, mq)
 
 	cleanup := func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		_ = newDb.DB.Database(conf.DbName).Collection("users").Drop(ctx)
 		_ = newDb.DB.Disconnect(ctx)
-		_ = os.Remove(".env")
+		_ = rabbitConn.Close()
 	}
 
-	return userSvc, cleanup
+	return userSvc, cleanup, mq
 }
 
 func TestCreateUserIntegration(t *testing.T) {
-	userSvc, cleanup := setupIntegrationTest(t)
+	userSvc, cleanup, mq := setupIntegrationTest(t)
 	defer cleanup()
+
+	queueName := declareAndBindQueue(t, mq, user.UserCreatedRoutingKey)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
@@ -58,13 +93,18 @@ func TestCreateUserIntegration(t *testing.T) {
 	}
 
 	err := userSvc.CreateUser(ctx, testUser)
+	assertPublished[user.User](t, mq, queueName, func(t *testing.T, actual user.User) {
+		assert.Equal(t, testUser.ID, actual.ID)
+	})
 	assert.NoError(t, err, "CreateUser should not return an error")
 	assert.NotEmpty(t, testUser.ID, "User ID should be generated")
 }
 
 func TestUpdateUserIntegration(t *testing.T) {
-	userSvc, cleanup := setupIntegrationTest(t)
+	userSvc, cleanup, mq := setupIntegrationTest(t)
 	defer cleanup()
+
+	queueName := declareAndBindQueue(t, mq, user.UserUpdatedRoutingKey)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
@@ -93,6 +133,10 @@ func TestUpdateUserIntegration(t *testing.T) {
 	err = userSvc.UpdateUser(ctx, testUser)
 	assert.NoError(t, err, "UpdateUser should not return an error")
 
+	assertPublished[user.User](t, mq, queueName, func(t *testing.T, actual user.User) {
+		assert.Equal(t, testUser.ID, actual.ID)
+	})
+
 	// Retrieve the user via the GetUser method to verify the update
 	updatedUser, err := userSvc.GetUser(ctx, testUser.ID)
 	assert.NoError(t, err, "GetUser should not return an error")
@@ -104,8 +148,10 @@ func TestUpdateUserIntegration(t *testing.T) {
 }
 
 func TestDeleteUserIntegration(t *testing.T) {
-	userSvc, cleanup := setupIntegrationTest(t)
+	userSvc, cleanup, mq := setupIntegrationTest(t)
 	defer cleanup()
+
+	queueName := declareAndBindQueue(t, mq, user.UserDeletedRoutingKey)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
@@ -126,12 +172,16 @@ func TestDeleteUserIntegration(t *testing.T) {
 	err = userSvc.DeleteUser(ctx, testUser.ID)
 	require.NoError(t, err, "DeleteUser should succeed")
 
+	assertPublished[string](t, mq, queueName, func(t *testing.T, actual string) {
+		assert.Equal(t, testUser.ID, actual)
+	})
+
 	_, err = userSvc.GetUser(ctx, testUser.ID)
 	assert.Error(t, err, "Expected error when retrieving a deleted user")
 }
 
 func TestGetUserIntegration(t *testing.T) {
-	userSvc, cleanup := setupIntegrationTest(t)
+	userSvc, cleanup, _ := setupIntegrationTest(t)
 	defer cleanup()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
@@ -161,7 +211,7 @@ func TestGetUserIntegration(t *testing.T) {
 }
 
 func TestListUsersByFirstNameIntegration(t *testing.T) {
-	userSvc, cleanup := setupIntegrationTest(t)
+	userSvc, cleanup, _ := setupIntegrationTest(t)
 	defer cleanup()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
